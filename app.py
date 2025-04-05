@@ -12,11 +12,7 @@ def cevapla(soru):
     soru = soru.lower()
     for i, row in df.iterrows():
         if row["Anahtar Kelime"].lower() in soru:
-            return f"**Açıklama:** {row['Açıklama']}
-
-**Çözüm:** {row['Çözüm']}
-
-**Sorumlu:** {row['Sorumlu']}"
+            return f"""**Açıklama:** {row['Açıklama']}\n\n**Çözüm:** {row['Çözüm']}\n\n**Sorumlu:** {row['Sorumlu']}"""
     return "🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı."
 
 if soru:
