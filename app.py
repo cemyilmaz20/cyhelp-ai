@@ -48,13 +48,13 @@ def anahtar_kelime_bul(soru):
                 return ak
     return None
 
-def logla(soru, kullanici):
+def logla(soru, kullanici, durum="Eşleşme bulunamadı"):
     log_yolu = "soru_loglari.xlsx"
     yeni_kayit = pd.DataFrame([{
         "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "Kullanıcı": kullanici if kullanici else "-",
         "Soru": soru,
-        "Durum": "Eşleşme bulunamadı"
+        "Durum": durum
     }])
     try:
         mevcut = pd.read_excel(log_yolu)
@@ -63,7 +63,7 @@ def logla(soru, kullanici):
         log_df = yeni_kayit
     log_df.to_excel(log_yolu, index=False)
 
-# Ana akış
+# Ana sistem
 if soru:
     anahtar = anahtar_kelime_bul(soru)
     if anahtar:
@@ -77,7 +77,7 @@ if soru:
             senaryo_goster(senaryolar.iloc[0])
         else:
             st.warning("⚠️ Eşleşen anahtar kelime bulundu ama senaryo bilgisi eksik.")
-            logla(soru, kullanici)
+            logla(soru, kullanici, durum="Anahtar eşleşti ama senaryo yok")
     else:
         st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
         logla(soru, kullanici)
