@@ -18,14 +18,22 @@ def yakala(cumle):
             return kelime
     return None
 
-# Senaryoya ait bilgileri göster
+import os
+
 def senaryo_goster(row):
     st.subheader(f"📌 {row['Senaryo']}")
     st.markdown(f"**🔎 Açıklama:** {row['Açıklama']}")
     st.markdown(f"**🛠️ Çözüm:** {row['Çözüm']}")
     st.markdown(f"**👤 Sorumlu:** {row['Sorumlu']}")
+
+    # Görsel varsa ve dosya gerçekten klasörde mevcutsa
     if pd.notna(row["Görsel"]) and row["Görsel"] != "":
-        st.image(f"images/{row['Görsel']}", caption=row["Senaryo"], use_column_width=True)
+        dosya_yolu = os.path.join("images", row["Görsel"])
+        if os.path.exists(dosya_yolu):
+            st.image(dosya_yolu, caption=row["Senaryo"], use_container_width=True)
+        else:
+            st.warning(f"⚠️ Görsel bulunamadı: {row['Görsel']}")
+
 
 # Kullanıcı soru girerse işleme başla
 if soru:
