@@ -13,7 +13,7 @@ def cevapla(soru):
     for i, row in df.iterrows():
         if row["Anahtar Kelime"].lower() in soru:
             return f"""**Açıklama:** {row['Açıklama']}\n\n**Çözüm:** {row['Çözüm']}\n\n**Sorumlu:** {row['Sorumlu']}"""
-    return "🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.Cem YILMAZ ile iletişime geçebilirsin :)"
+    return "🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı. Cem YILMAZ ile iletişime geçebilirsin :)"
 
 if soru:
     st.markdown(cevapla(soru))
