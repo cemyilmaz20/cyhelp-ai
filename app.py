@@ -6,11 +6,9 @@ from datetime import datetime, timedelta
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Sayfa ayarı
 st.set_page_config(page_title="CYHELP", page_icon="🧠")
 st.title("🔧 CYHELP | Yapay Zeka Destekli VAVA İş Akış Asistanı")
 
-# Ana veriler
 df = pd.read_excel("veri.xlsx")
 stop_words = ["ben", "bir", "bu", "şu", "ve", "ile", "de", "da", "ama", "çok", "neden", "nasıl", "şey", "gibi", "ki"]
 
@@ -21,7 +19,6 @@ es_anlamli = {
     "çalışmıyor": ["açılmıyor", "başlamıyor", "görünmüyor"]
 }
 
-# Google Sheet bağlantısı
 def google_log_yaz(log):
     try:
         scope = ["https://spreadsheets.google.com/feeds",
@@ -32,10 +29,11 @@ def google_log_yaz(log):
         client = gspread.authorize(creds)
         sheet = client.open_by_key("1xkLogLi6AD5Z2TILjGhnNIVecKT608LbQpaZrORV6yI").sheet1
         sheet.append_row([log["Tarih"], log["Kullanıcı"], log["Soru"], log["Durum"]])
+        return True
     except Exception as e:
-        print("Google Sheet log hatası:", e)
+        st.warning(f"⚠️ Google Sheet log hatası: {e}")
+        return False
 
-# Log yazma
 def logla(soru, kullanici, durum="Eşleşme bulunamadı"):
     tarih = (datetime.now() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
     yeni_log = {
@@ -44,8 +42,6 @@ def logla(soru, kullanici, durum="Eşleşme bulunamadı"):
         "Soru": soru,
         "Durum": durum
     }
-
-    # Excel'e yaz
     log_yolu = "soru_loglari.xlsx"
     try:
         mevcut = pd.read_excel(log_yolu)
@@ -53,11 +49,8 @@ def logla(soru, kullanici, durum="Eşleşme bulunamadı"):
     except:
         log_df = pd.DataFrame([yeni_log])
     log_df.to_excel(log_yolu, index=False)
-
-    # Google Sheet'e yaz
     google_log_yaz(yeni_log)
 
-# Anahtar kelime yakalama
 def anahtar_kelime_bul(soru):
     kelimeler = re.findall(r'\b\w+\b', soru.lower())
     anlamli = [k for k in kelimeler if k not in stop_words]
@@ -71,7 +64,6 @@ def anahtar_kelime_bul(soru):
                 return ak
     return None
 
-# Senaryo gösterimi
 def senaryo_goster(row):
     st.subheader(f"📌 {row['Senaryo']}")
     st.markdown(f"**🔎 Açıklama:** {row['Açıklama']}")
@@ -80,11 +72,11 @@ def senaryo_goster(row):
     if pd.notna(row["Görsel"]) and row["Görsel"] != "":
         dosya_yolu = os.path.join("images", row["Görsel"])
         if os.path.exists(dosya_yolu):
-            st.image(dosya_yolu, caption=row["Senaryo"], use_container_width=True)
+            st.image(dosya_yolu, caption=row["Senaryo"], use_column_width=True)
         else:
             st.warning(f"⚠️ Hata ile ilgili görsel bulunamadı")
 
-# Giriş yakalama
+# Admin erişimi
 admin_giris = False
 soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...)")
 
@@ -97,25 +89,32 @@ if soru.lower() == "cyadminacil":
     else:
         st.stop()
 
-# ✅ Admin Panel
+# 👑 Admin panel
 if admin_giris:
     st.success("✅ Giriş başarılı. Loglar aşağıda:")
     try:
         log_df = pd.read_excel("soru_loglari.xlsx")
         st.dataframe(log_df, use_container_width=True)
-
         st.download_button("📥 Excel olarak indir", data=log_df.to_excel(index=False),
                            file_name="soru_loglari.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-        if st.button("🗑️ Logları Sıfırla"):
-            os.remove("soru_loglari.xlsx")
-            st.success("Log dosyası sıfırlandı. Sayfayı yenileyin.")
-            st.stop()
     except:
         st.info("📁 Log dosyası henüz oluşmadı.")
+    
+    if st.button("🗑️ Logları Sıfırla"):
+        if os.path.exists("soru_loglari.xlsx"):
+            os.remove("soru_loglari.xlsx")
+            st.success("✅ Log dosyası sıfırlandı.")
+        else:
+            st.warning("Zaten log dosyası yoktu.")
+        st.stop()
+
+    # Test tuşu
+    if st.button("🔁 Google Sheet Test"):
+        logla("test mesajı", "admin_test", "Admin test logu")
+        st.success("Google Sheet'e test logu gönderildi.")
     st.stop()
 
-# 👤 Normal Kullanıcı Akışı
+# Kullanıcı adı (isteğe bağlı)
 kullanici = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):")
 
 if soru and soru.lower() != "cyadminacil":
