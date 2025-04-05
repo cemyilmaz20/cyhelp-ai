@@ -7,28 +7,20 @@ from datetime import datetime
 st.set_page_config(page_title="CYHELP", page_icon="🧠")
 st.title("🔧 CYHELP | Yapay Zeka Destekli VAVA İş Akış Asistanı")
 
-# Excel'den veriler alınır
 df = pd.read_excel("veri.xlsx")
 
-# Türkçe stopwords
 stop_words = ["ben", "bir", "bu", "şu", "ve", "ile", "de", "da", "ama", "çok", "neden", "nasıl", "şey", "gibi", "ki"]
 
-# Eşanlamlılar haritası
 es_anlamli = {
     "dondu": ["kitlendi", "takıldı", "çöktü", "donuyor", "kasma"],
     "giriş": ["login", "şifre", "oturum", "giremiyorum"],
     "ruhsat": ["belge", "noter evrağı", "vesika"],
-    "çalışmıyor": ["açılmıyor", "başlamıyor", "görünmüyor"],
-    # genişletebilirsin
+    "çalışmıyor": ["açılmıyor", "başlamıyor", "görünmüyor"]
 }
 
-# Kullanıcı adı opsiyonel
 kullanici = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):")
-
-# Soru giriş alanı
 soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...)")
 
-# Görsel destekli senaryo gösterici
 def senaryo_goster(row):
     st.subheader(f"📌 {row['Senaryo']}")
     st.markdown(f"**🔎 Açıklama:** {row['Açıklama']}")
@@ -41,7 +33,6 @@ def senaryo_goster(row):
         else:
             st.warning(f"⚠️ Hata ile ilgili görsel bulunamadı")
 
-# Anahtar kelime bulucu (eşanlamlı destekli)
 def anahtar_kelime_bul(soru):
     kelimeler = re.findall(r'\b\w+\b', soru.lower())
     anlamli = [k for k in kelimeler if k not in stop_words]
@@ -51,14 +42,12 @@ def anahtar_kelime_bul(soru):
             if k in ak.lower() or ak.lower() in k:
                 return ak
 
-    # eşanlamlı kontrol
     for ak, esler in es_anlamli.items():
         for es in esler:
             if es in anlamli:
                 return ak
     return None
 
-# Log fonksiyonu
 def logla(soru, kullanici):
     log_yolu = "soru_loglari.xlsx"
     yeni_kayit = pd.DataFrame([{
@@ -84,8 +73,11 @@ if soru:
             secim = st.selectbox("Lütfen durumu seçin:", senaryolar["Senaryo"].tolist())
             secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
             senaryo_goster(secilen)
-        else:
+        elif len(senaryolar) == 1:
             senaryo_goster(senaryolar.iloc[0])
+        else:
+            st.warning("⚠️ Eşleşen anahtar kelime bulundu ama senaryo bilgisi eksik.")
+            logla(soru, kullanici)
     else:
         st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
         logla(soru, kullanici)
