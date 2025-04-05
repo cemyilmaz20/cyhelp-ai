@@ -1,20 +1,16 @@
 import streamlit as st
 import pandas as pd
-import os
 
 st.set_page_config(page_title="CYHELP", page_icon="🧠")
 st.title("🔧 CYHELP | Yapay Zeka Destekli VAVA İş Akış Asistanı")
 
+# Excel'den verileri çekiyoruz
 df = pd.read_excel("veri.xlsx")
 
-soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...):")
+# Soru giriş kutusu
+soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...)")
 
-# Eşleşen anahtar kelimelerden senaryo çıkar
-def senaryo_bul(kelime):
-    senaryolar = df[df["Anahtar Kelime"].str.lower() == kelime.lower()]
-    return senaryolar
-
-# Cümleden kelime yakala
+# Anahtar kelime eşleştiricisi
 def yakala(cumle):
     cumle = cumle.lower()
     for kelime in df["Anahtar Kelime"].unique():
@@ -22,7 +18,7 @@ def yakala(cumle):
             return kelime
     return None
 
-# Seçilen senaryoyu göster
+# Senaryoya ait bilgileri göster
 def senaryo_goster(row):
     st.subheader(f"📌 {row['Senaryo']}")
     st.markdown(f"**🔎 Açıklama:** {row['Açıklama']}")
@@ -31,13 +27,20 @@ def senaryo_goster(row):
     if pd.notna(row["Görsel"]) and row["Görsel"] != "":
         st.image(f"images/{row['Görsel']}", caption=row["Senaryo"], use_column_width=True)
 
+# Kullanıcı soru girerse işleme başla
 if soru:
     bulunan = yakala(soru)
+
     if bulunan:
-        senaryolar = senaryo_bul(bulunan)
-        st.info(f"🧠 '{bulunan}' ile ilgili {len(senaryolar)} çözüm bulundu:")
-        secim = st.selectbox("Hangi durumu yaşıyorsunuz?", senaryolar["Senaryo"].tolist())
-        secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
-        senaryo_goster(secilen)
+        # Aynı kelimeye karşılık gelen tüm senaryoları getir
+        senaryolar = df[df["Anahtar Kelime"].str.lower() == bulunan.lower()]
+
+        if len(senaryolar) > 1:
+            st.info(f"🧠 '{bulunan}' kelimesi için {len(senaryolar)} farklı senaryo bulundu:")
+            secim = st.selectbox("Lütfen neyi kastettiğinizi seçin:", senaryolar["Senaryo"].tolist())
+            secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
+            senaryo_goster(secilen)
+        else:
+            senaryo_goster(senaryolar.iloc[0])
     else:
-        st.warning("🤖 Bu soruya dair eşleşen bir kayıt bulunamadı. Cem YILMAZ'a sorun :) ")
+        st.warning("🤖 Bu kelimeyle eşleşen bir çözüm bulunamadı. Cem YILMAZ’a sor 😎")
