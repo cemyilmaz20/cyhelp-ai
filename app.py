@@ -32,7 +32,7 @@ def senaryo_goster(row):
         if os.path.exists(dosya_yolu):
             st.image(dosya_yolu, caption=row["Senaryo"], use_container_width=True)
         else:
-            st.warning(f"⚠️ Görsel bulunamadı: {row['Görsel']}")
+            st.warning(f"⚠️ Hata ile ilgili görsel bulunamadı")
 
 
 # Kullanıcı soru girerse işleme başla
