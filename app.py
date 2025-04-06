@@ -1,91 +1,107 @@
-import streamlit as st
-import pandas as pd
-import os
 from datetime import datetime
+import pandas as pd
+import streamlit as st
+import os
 
+# Sayfa ayarları
 st.set_page_config(page_title="CYHELP | VAVA İş Akış Asistanı", page_icon="🧠")
-
-# Logo ve başlık
 st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
 
-# Excel yükle
-df = pd.read_excel("veri.xlsx")
+# Dosya yolları
+EXCEL_PATH = "veri.xlsx"
+LOG_PATH = "soru_loglari.xlsx"
 
-# Gizli admin tetikleyici
-soru_input = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...)", key="soru")
-
-# Global log listesi
-if "logs" not in st.session_state:
-    st.session_state.logs = []
-
-# Admin girişi tetikleme
-if soru_input.strip().lower() == "cyadminacil":
-    with st.expander("🔐 Yetkili girişi yapılıyor...", expanded=True):
-        username = st.text_input("👤 Kullanıcı Adı", key="admin_user")
-        password = st.text_input("🔑 Şifre", type="password", key="admin_pass")
-
-        if username == "cmyvava" and password == "12345":
-            st.success("✅ Giriş başarılı. Loglar aşağıda:")
-            logs = pd.DataFrame(st.session_state.logs, columns=["Tarih", "Soru", "Durum", "Kullanıcı"])
-            st.dataframe(logs, use_container_width=True)
-
-            if len(logs) > 0:
-                st.download_button("📥 Excel olarak indir", data=logs.to_csv(index=False).encode("utf-8"), file_name="soru_loglari.csv", mime="text/csv")
-                if st.button("🗑️ Logları sıfırla"):
-                    st.session_state.logs = []
-                    st.rerun()
-
-            if st.button("🚪 Oturumu Kapat"):
-               st.session_state.pop("admin_user", None)
-               st.session_state.pop("admin_pass", None)
-               st.session_state["soru"] = ""  # ← cyadminacil ifadesini temizle
-               st.rerun()
-
-        elif username or password:
-            st.error("❌ Hatalı kullanıcı adı veya şifre")
-
-# Normal kullanıcı arayüzü
+# Log yükle veya oluştur
+if os.path.exists(LOG_PATH):
+    logs = pd.read_excel(LOG_PATH)
 else:
-    kullanici_adi = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):", key="kullanici")
+    logs = pd.DataFrame(columns=["Tarih", "Soru", "Durum", "Kullanıcı"])
 
-    # Anahtar kelime eşleştir
-    def yakala(cumle):
-        cumle = cumle.lower()
-        for kelime in df["Anahtar Kelime"].unique():
-            if str(kelime).lower() in cumle:
-                return kelime
-        return None
+# Ana veri
+df = pd.read_excel(EXCEL_PATH)
 
-    def senaryo_bul(kelime):
-        return df[df["Anahtar Kelime"].str.lower() == kelime.lower()]
+# Session başlangıcı
+if "admin_user" not in st.session_state:
+    st.session_state["admin_user"] = None
+if "soru" not in st.session_state:
+    st.session_state["soru"] = ""
 
-    def senaryo_goster(row):
-        st.subheader(f"📌 {row['Senaryo']}")
-        st.markdown(f"**🔎 Açıklama:** {row['Açıklama']}")
-        st.markdown(f"**🛠️ Çözüm:** {row['Çözüm']}")
-        st.markdown(f"**👤 Sorumlu:** {row['Sorumlu']}")
-        if pd.notna(row["Görsel"]) and row["Görsel"] != "":
-            st.image(f"images/{row['Görsel']}", caption=row["Senaryo"], use_column_width=True)
-        else:
-            st.warning(f"⚠️ Hata ile ilgili görsel bulunamadı")
+# Giriş alanı
+soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...)", value=st.session_state["soru"])
+st.session_state["soru"] = soru
+kullanici = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):", key="kullanici_adi")
 
-    if soru_input:
-        bulunan = yakala(soru_input)
-        if bulunan:
-            senaryolar = senaryo_bul(bulunan)
-            if not senaryolar.empty:
-                st.info(f"🧠 '{bulunan}' ile ilgili {len(senaryolar)} çözüm bulundu:")
-                secim = st.selectbox("Lütfen neyi kastettiğinizi seçin:", senaryolar["Senaryo"].tolist())
-                secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
-                senaryo_goster(secilen)
-                durum = "Eşleşme bulundu"
+# Gizli admin giriş ekranı
+if soru.lower() == "cyadminacil":
+    with st.expander("🔐 Yetkili girişi yapılıyor..."):
+        admin_user = st.text_input("👤 Kullanıcı Adı", key="admin_user_input")
+        admin_pass = st.text_input("🔑 Şifre", type="password")
+        if st.button("Giriş"):
+            if admin_user == "cmyvava" and admin_pass == "12345":
+                st.session_state["admin_user"] = admin_user
+                st.success("✅ Giriş başarılı. Loglar aşağıda:")
             else:
-                st.warning("⚠️ Eşleşen anahtar kelime bulundu ama senaryo bilgisi eksik.")
-                durum = "Anahtar eşleşti ama senaryo yok"
-        else:
-            st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
-            durum = "Eşleşme bulunamadı"
+                st.error("❌ Hatalı kullanıcı adı veya şifre")
 
-        # Log ekle
-        yeni_kayit = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), soru_input, durum, kullanici_adi if kullanici_adi else "-"]
-        st.session_state.logs.append(yeni_kayit)
+# Admin panel
+if st.session_state["admin_user"]:
+    st.success("✅ Giriş başarılı. Loglar aşağıda:")
+    st.dataframe(logs)
+
+    if not logs.empty:
+        st.download_button("📥 Excel olarak indir", data=logs.to_excel(index=False), file_name="loglar.xlsx")
+
+        if st.button("🗑️ Logları sıfırla"):
+            logs = pd.DataFrame(columns=["Tarih", "Soru", "Durum", "Kullanıcı"])
+            if os.path.exists(LOG_PATH):
+                os.remove(LOG_PATH)
+            st.rerun()
+
+    if st.button("🚪 Oturumu Kapat"):
+        st.session_state["admin_user"] = None
+        st.session_state["soru"] = ""
+        st.rerun()
+
+    if logs.empty:
+        st.info("📂 Log dosyası henüz oluşmadı.")
+
+# Anahtar kelime yakalama
+def yakala(cumle):
+    cumle = cumle.lower()
+    for kelime in df["Anahtar Kelime"].dropna().unique():
+        if kelime.lower() in cumle:
+            return kelime
+    return None
+
+# Senaryo gösterme
+def senaryo_goster(row):
+    st.subheader(f"📌 {row['Senaryo']}")
+    st.markdown(f"**🔎 Açıklama:** {row['Açıklama']}")
+    st.markdown(f"**🛠️ Çözüm:** {row['Çözüm']}")
+    st.markdown(f"**👤 Sorumlu:** {row['Sorumlu']}")
+    if pd.notna(row["Görsel"]) and row["Görsel"] != "":
+        st.image(f"images/{row['Görsel']}", caption=row["Senaryo"], use_column_width=True)
+    else:
+        st.warning(f"⚠️ Hata ile ilgili görsel bulunamadı")
+
+# Soru işleme
+if soru and soru.lower() != "cyadminacil" and not st.session_state["admin_user"]:
+    bulunan = yakala(soru)
+    if bulunan:
+        senaryolar = df[df["Anahtar Kelime"].str.lower() == bulunan]
+        if not senaryolar.empty:
+            st.info(f"🧠 '{bulunan}' kelimesiyle ilgili {len(senaryolar)} senaryo bulundu:")
+            secim = st.selectbox("Lütfen neyi kastettiğinizi seçin:", senaryolar["Senaryo"].tolist())
+            secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
+            senaryo_goster(secilen)
+            yeni_log = {"Tarih": datetime.now(), "Soru": soru, "Durum": "Eşleşme bulundu", "Kullanıcı": kullanici if kullanici else "-"}
+        else:
+            st.warning("⚠️ Eşleşen anahtar kelime bulundu ama senaryo bilgisi eksik.")
+            yeni_log = {"Tarih": datetime.now(), "Soru": soru, "Durum": "Anahtar eşleşti ama senaryo yok", "Kullanıcı": kullanici if kullanici else "-"}
+    else:
+        st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
+        yeni_log = {"Tarih": datetime.now(), "Soru": soru, "Durum": "Eşleşme bulunamadı", "Kullanıcı": kullanici if kullanici else "-"}
+
+    # Log'a yaz
+    logs = pd.concat([logs, pd.DataFrame([yeni_log])], ignore_index=True)
+    logs.to_excel(LOG_PATH, index=False)
