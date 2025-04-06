@@ -1,4 +1,3 @@
-
 from datetime import datetime
 import pandas as pd
 import streamlit as st
@@ -7,8 +6,6 @@ import io
 from cyhelp_ekstra_moduller import *  # 👈 bu satırı ekliyorsun
 st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
 st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
-
-
 
 EXCEL_LOG = "soru_loglari.xlsx"
 EXCEL_DATA = "veri.xlsx"
@@ -71,32 +68,35 @@ if soru.strip().lower() == ADMIN_KODU.lower():
         st.text_input("👤 Kullanıcı Adı", key="admin_user")
         st.text_input("🔑 Şifre", type="password", key="sifre")
         if st.session_state.get("admin_user") == ADMIN_KULLANICI and st.session_state.get("sifre") == ADMIN_SIFRE:
-            st.success("✅ Giriş başarılı. Loglar aşağıda:")
-            logs = loglari_yukle()
-            st.subheader("📊 Soru Logları")
-            st.dataframe(logs, use_container_width=True)
+            st.success("✅ Giriş başarılı.")
 
-            buffer = io.BytesIO()
-            logs.to_excel(buffer, index=False, engine='openpyxl')
-            buffer.seek(0)
+            # Butonlarla işlem seçme
+            secim = st.radio("🔧 Admin İşlemleri Seçin", ["Logları Gör", "Yeni Senaryo", "Senaryo Düzenle", "Sık Sorular"])
 
-            st.download_button(
-            "📥 Excel olarak indir",
-            data=buffer,
-            file_name="soru_loglari.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            if secim == "Logları Gör":
+                logs = loglari_yukle()
+                st.subheader("📊 Soru Logları")
+                st.dataframe(logs, use_container_width=True)
+                buffer = io.BytesIO()
+                logs.to_excel(buffer, index=False, engine='openpyxl')
+                buffer.seek(0)
+                st.download_button("📥 Excel olarak indir", data=buffer, file_name="soru_loglari.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                if st.button("🗑️ Logları sıfırla"):
+                    os.remove(EXCEL_LOG) if os.path.exists(EXCEL_LOG) else None
+                    st.rerun()
 
-            if st.button("🗑️ Logları sıfırla"):
-                os.remove(EXCEL_LOG) if os.path.exists(EXCEL_LOG) else None
-                st.rerun()
+            elif secim == "Yeni Senaryo":
+                senaryo_ekle_formu()
 
-            senaryo_ekle_formu()
-            senaryo_duzenle_paneli()
-            sik_sorulan_kontrolu()
+            elif secim == "Senaryo Düzenle":
+                senaryo_duzenle_paneli()
+
+            elif secim == "Sık Sorular":
+                sik_sorulan_kontrolu()
 
             if st.button("🚪 Oturumu Kapat"):
                 oturumu_kapat()
+
         elif st.session_state.get("admin_user") and st.session_state.get("sifre"):
             st.error("❌ Hatalı kullanıcı adı veya şifre")
 
@@ -120,4 +120,3 @@ else:
             st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
             log_ekle(soru, "Eşleşme bulunamadı", kullanici_adi)
             toast_bildirim("⚠️ Eşleşme bulunamadı", "error")
-
