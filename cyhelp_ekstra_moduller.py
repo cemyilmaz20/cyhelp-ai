@@ -48,6 +48,7 @@ def senaryo_ekle_formu():
             df = pd.concat([df, yeni], ignore_index=True)
             df.to_excel(dosya, index=False)
             st.success("✅ Yeni senaryo başarıyla eklendi.")
+            st.experimental_rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim.
 
 # Mevcut senaryoyu düzenleme paneli
 def senaryo_duzenle_paneli():
