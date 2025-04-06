@@ -53,8 +53,8 @@ def senaryo_ekle_formu():
             # Dosyayı kaydet
             try:
                 df.to_excel(dosya, index=False)
-                st.success("✅ Yeni senaryo başarıyla eklendi.")
-                st.write(f"**Veri Kaydedildi:** {df.tail(1)}")  # Debug: Kaydedilen yeni veriyi konsola yazdır
+                # Başarı mesajını session_state üzerinden sakla
+                st.session_state["success_message"] = "✅ Yeni senaryo başarıyla eklendi."
                 st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim
             except Exception as e:
                 st.error(f"❌ Senaryo eklenirken hata oluştu: {str(e)}")
@@ -90,8 +90,8 @@ def senaryo_duzenle_paneli():
             df.loc[df["Senaryo"] == secim, ["Anahtar Kelime", "Açıklama", "Çözüm", "Sorumlu", "Görsel"]] = \
                 [yeni_anahtar, yeni_aciklama, yeni_cozum, yeni_sorumlu, yeni_gorsel]
             df.to_excel(dosya, index=False)
-            st.success("✅ Güncelleme tamamlandı.")
-            st.write(f"**Veri Güncellendi:** {df[df['Senaryo'] == secim]}")  # Debug: Güncellenen veriyi konsola yazdır
+            # Başarı mesajını session_state üzerinden sakla
+            st.session_state["success_message"] = "✅ Güncelleme tamamlandı."
             st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim
         except Exception as e:
             st.error(f"❌ Güncelleme sırasında hata oluştu: {str(e)}")
@@ -108,3 +108,8 @@ def sik_sorulan_kontrolu():
     populer = df["Soru"].value_counts().head(5)
     for soru, adet in populer.items():
         st.markdown(f"- **{soru}** → {adet} kez")
+
+# Ekranda başarı mesajını göster
+if "success_message" in st.session_state:
+    st.success(st.session_state["success_message"])
+    del st.session_state["success_message"]  # Mesajı bir kez gösterdikten sonra sil
