@@ -1,4 +1,3 @@
-import time
 import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
@@ -78,8 +77,9 @@ def senaryo_duzenle_paneli():
     yeni_gorsel = st.text_input("🖼️ Görsel", value=secilen["Görsel"])
 
     if st.button("💾 Güncelle"):
+        # Anahtar kelimeyi de güncelliyoruz
         df.loc[df["Senaryo"] == secim, ["Anahtar Kelime", "Açıklama", "Çözüm", "Sorumlu", "Görsel"]] = \
-            [yeni_aciklama, yeni_cozum, yeni_sorumlu, yeni_gorsel]
+            [secilen["Anahtar Kelime"], yeni_aciklama, yeni_cozum, yeni_sorumlu, yeni_gorsel]
         df.to_excel(dosya, index=False)
         st.success("✅ Güncelleme tamamlandı.")
 
