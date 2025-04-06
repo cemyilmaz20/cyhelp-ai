@@ -18,7 +18,7 @@ def toast_bildirim(mesaj, tipi="info"):
     else:
         st.info(mesaj)
 
-# Yeni senaryo ekleme formu (expander KALDIRILDI!)
+# Yeni senaryo ekleme formu
 def senaryo_ekle_formu():
     st.markdown("### ➕ Yeni Senaryo Ekle")
     with st.form("senaryo_ekle_form", clear_on_submit=True):
@@ -32,13 +32,12 @@ def senaryo_ekle_formu():
         ekle = st.form_submit_button("✅ Ekle")
         if ekle and anahtar and senaryo:
             dosya = "veri.xlsx"
-            # Eğer dosya var ise oku, yoksa yeni oluştur
             if os.path.exists(dosya):
                 df = pd.read_excel(dosya)
             else:
                 df = pd.DataFrame(columns=["Anahtar Kelime", "Senaryo", "Açıklama", "Çözüm", "Sorumlu", "Görsel"])
 
-            # Yeni senaryoyu ekle
+            # Yeni senaryo verisini ekle
             yeni = pd.DataFrame([{
                 "Anahtar Kelime": anahtar,
                 "Senaryo": senaryo,
@@ -47,11 +46,18 @@ def senaryo_ekle_formu():
                 "Sorumlu": sorumlu,
                 "Görsel": gorsel
             }])
-            df = pd.concat([df, yeni], ignore_index=True)  # Yeni senaryoyu ekle
-            df.to_excel(dosya, index=False)  # Veriyi kaydet
 
-            st.success("✅ Yeni senaryo başarıyla eklendi.")
-            st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim.
+            # Yeni veriyi mevcut veriye ekle
+            df = pd.concat([df, yeni], ignore_index=True)
+            
+            # Dosyayı kaydet
+            try:
+                df.to_excel(dosya, index=False)
+                st.success("✅ Yeni senaryo başarıyla eklendi.")
+                st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim
+            except Exception as e:
+                st.error(f"❌ Senaryo eklenirken hata oluştu: {str(e)}")
+                print(f"Error while saving to Excel: {str(e)}")  # Debugging: Print error
 
 # Mevcut senaryoyu düzenleme paneli
 def senaryo_duzenle_paneli():
@@ -67,16 +73,27 @@ def senaryo_duzenle_paneli():
     secim = st.selectbox("Düzenlenecek Senaryo", df["Senaryo"].tolist())
     secilen = df[df["Senaryo"] == secim].iloc[0]
 
+    yeni_anahtar = st.text_input("🔑 Anahtar Kelime", value=secilen["Anahtar Kelime"])
     yeni_aciklama = st.text_area("📖 Açıklama", value=secilen["Açıklama"])
     yeni_cozum = st.text_area("🛠️ Çözüm", value=secilen["Çözüm"])
     yeni_sorumlu = st.text_input("👤 Sorumlu", value=secilen["Sorumlu"])
     yeni_gorsel = st.text_input("🖼️ Görsel", value=secilen["Görsel"])
 
     if st.button("💾 Güncelle"):
-        df.loc[df["Senaryo"] == secim, ["Açıklama", "Çözüm", "Sorumlu", "Görsel"]] = \
-            [yeni_aciklama, yeni_cozum, yeni_sorumlu, yeni_gorsel]
-        df.to_excel(dosya, index=False)
-        st.success("✅ Güncelleme tamamlandı.")
+        # Debugging: Print values
+        print(f"Updating scenario: {secilen['Senaryo']} with new values.")
+        print(f"New Key: {yeni_anahtar}, New Description: {yeni_aciklama}")
+
+        # Güncellenen anahtar kelimeyi ve diğer bilgileri kaydet
+        try:
+            df.loc[df["Senaryo"] == secim, ["Anahtar Kelime", "Açıklama", "Çözüm", "Sorumlu", "Görsel"]] = \
+                [yeni_anahtar, yeni_aciklama, yeni_cozum, yeni_sorumlu, yeni_gorsel]
+            df.to_excel(dosya, index=False)
+            st.success("✅ Güncelleme tamamlandı.")
+            st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim
+        except Exception as e:
+            st.error(f"❌ Güncelleme sırasında hata oluştu: {str(e)}")
+            print(f"Error while updating Excel: {str(e)}")  # Debugging: Print error
 
 # Sık gelen sorular listesi (öğrenen yapı)
 def sik_sorulan_kontrolu():
