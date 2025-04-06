@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
 import datetime
-from io import BytesIO
 import os
+from io import BytesIO
 
+# Sayfa başlığı ve ayarları
 st.set_page_config(page_title="CYHELP | VAVA İş Akış Asistanı", page_icon="🧠")
 
 st.markdown("""
@@ -12,18 +13,20 @@ st.markdown("""
 </h1>
 """, unsafe_allow_html=True)
 
-# Veri dosyasını yükle
+# Gerekli dosyalar
 df = pd.read_excel("veri.xlsx")
-
-# Log dosyasının adı
 LOG_FILE = "soru_loglari.xlsx"
 
-# Gizli admin anahtar kelime
+# Admin bilgiler
 GIZLI_KELIME = "cyadminacil"
 ADMIN_KULLANICI = "cmyvava"
 ADMIN_SIFRE = "12345"
 
-# Log fonksiyonu
+# Oturum başlatma
+if "admin_mode" not in st.session_state:
+    st.session_state.admin_mode = False
+
+# Log kaydetme fonksiyonu
 def log_kaydet(soru, durum, kullanici):
     log = {
         "Tarih": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -40,7 +43,6 @@ def log_kaydet(soru, durum, kullanici):
         df_log.to_excel(LOG_FILE, index=False)
     except Exception as e:
         st.warning(f"⚠️ Log kaydedilemedi: {e}")
-
 # Senaryo gösterimi
 def senaryo_goster(row):
     st.subheader(f"📌 {row['Senaryo']}")
@@ -52,7 +54,7 @@ def senaryo_goster(row):
     else:
         st.warning("⚠️ Hata ile ilgili görsel bulunamadı")
 
-# Anahtar kelime eşleştirme
+# Anahtar kelime yakalama
 def yakala(cumle):
     cumle = cumle.lower()
     for kelime in df["Anahtar Kelime"].dropna().unique():
@@ -72,29 +74,40 @@ def admin_paneli():
         logs.to_excel(excel_buffer, index=False)
         excel_buffer.seek(0)
 
-        st.download_button("📥 Excel olarak indir", data=excel_buffer, file_name="loglar.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button("📥 Excel olarak indir", data=excel_buffer, file_name="loglar.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
         if st.button("🗑️ Logları sıfırla"):
             os.remove(LOG_FILE)
             st.warning("🧹 Log dosyası silindi.")
     else:
-        st.info("📁 Log dosyası henüz oluşmadı.")
+        st.info("📂 Log dosyası henüz oluşmadı.")
 
-# --- GİRİŞ EKRANI ---
+    if st.button("🚪 Oturumu Kapat"):
+        st.session_state.admin_mode = False
+        st.rerun()
 
+# Giriş alanları
 soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...)")
 kullanici = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):")
 
-# ADMIN GİRİŞ
+# Admin girişi
+if st.session_state.admin_mode:
+    admin_paneli()
+    st.stop()
+
 if soru.strip().lower() == GIZLI_KELIME:
     st.warning("🔒 Yetkili girişi yapılıyor...")
     user = st.text_input("👤 Kullanıcı Adı")
     pw = st.text_input("🔑 Şifre", type="password")
     if user == ADMIN_KULLANICI and pw == ADMIN_SIFRE:
-        admin_paneli()
+        st.session_state.admin_mode = True
+        st.rerun()
     else:
-        st.stop()
+        st.warning("❌ Hatalı kullanıcı adı veya şifre")
+    st.stop()
 
+# Normal kullanıcı işlemleri
 elif soru:
     bulunan = yakala(soru)
     if bulunan:
