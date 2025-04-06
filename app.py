@@ -1,11 +1,13 @@
+import streamlit as st
 from datetime import datetime
 import pandas as pd
-import streamlit as st
 import os
 import io
 from cyhelp_ekstra_moduller import *  # 👈 Bu satır kaldı
 
+# Sayfa ayarlarını ilk sıraya taşıyoruz
 st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
+
 st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
 
 EXCEL_LOG = "soru_loglari.xlsx"
