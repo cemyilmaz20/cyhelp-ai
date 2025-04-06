@@ -1,122 +1,88 @@
-from datetime import datetime
-import pandas as pd
 import streamlit as st
+from datetime import datetime, timedelta
+import pandas as pd
 import os
-import io
-from cyhelp_ekstra_moduller import *  # 👈 bu satırı ekliyorsun
-st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
-st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
 
-EXCEL_LOG = "soru_loglari.xlsx"
-EXCEL_DATA = "veri.xlsx"
-ADMIN_KODU = "cyadminacil"
-ADMIN_KULLANICI = "cmyvava"
-ADMIN_SIFRE = "12345"
+# Türkiye saatine göre zaman
+def turkiye_saati():
+    return (datetime.utcnow() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
 
-def oturumu_kapat():
-    for key in ["admin_user", "sifre", "logs", "soru"]:
-        st.session_state.pop(key, None)
-    st.rerun()
-
-def loglari_yukle():
-    if os.path.exists(EXCEL_LOG):
-        return pd.read_excel(EXCEL_LOG)
-    return pd.DataFrame(columns=["Tarih", "Soru", "Durum", "Kullanıcı"])
-
-def log_ekle(soru, durum, kullanici):
-    logs = loglari_yukle()
-    yeni_kayit = {
-        "Tarih": turkiye_saati(),  # Saat düzeltildi
-        "Soru": soru,
-        "Durum": durum,
-        "Kullanıcı": kullanici if kullanici else "-"
-    }
-    logs = pd.concat([logs, pd.DataFrame([yeni_kayit])], ignore_index=True)
-    logs.to_excel(EXCEL_LOG, index=False)
-
-def anahtar_bul(cumle, keywords):
-    cumle = cumle.lower()
-    for kelime in keywords:
-        if kelime.lower() in cumle:
-            return kelime
-    return None
-
-def senaryo_goster(row):
-    st.subheader(f"📌 {row['Senaryo']}")
-    st.markdown(f"**🔎 Açıklama:** {row['Açıklama']}")
-    st.markdown(f"**🛠️ Çözüm:** {row['Çözüm']}")
-    st.markdown(f"**👤 Sorumlu:** {row['Sorumlu']}")
-    if pd.notna(row["Görsel"]) and row["Görsel"] != "":
-        st.image(f"images/{row['Görsel']}", caption=row["Senaryo"])
+# Bildirim (toast gibi)
+def toast_bildirim(mesaj, tipi="info"):
+    if tipi == "success":
+        st.success(mesaj)
+    elif tipi == "warning":
+        st.warning(mesaj)
+    elif tipi == "error":
+        st.error(mesaj)
     else:
-        st.warning(f"⚠️ Hata ile ilgili görsel bulunamadı")
+        st.info(mesaj)
 
-@st.cache_data
-def veriyi_yukle():
-    if os.path.exists(EXCEL_DATA):
-        return pd.read_excel(EXCEL_DATA)
-    else:
-        return pd.DataFrame(columns=["Anahtar Kelime", "Senaryo", "Açıklama", "Çözüm", "Sorumlu", "Görsel"])
+# Yeni senaryo ekleme formu (expander KALDIRILDI!)
+def senaryo_ekle_formu():
+    st.markdown("### ➕ Yeni Senaryo Ekle")
+    with st.form("senaryo_ekle_form", clear_on_submit=True):
+        anahtar = st.text_input("🔑 Anahtar Kelime")
+        senaryo = st.text_input("📌 Senaryo Başlığı")
+        aciklama = st.text_area("📖 Açıklama")
+        cozum = st.text_area("🛠️ Çözüm")
+        sorumlu = st.text_input("👤 Sorumlu")
+        gorsel = st.text_input("🖼️ Görsel Dosya Adı (images klasörüne yüklenmeli)")
 
-df = veriyi_yukle()
-
-soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...):", key="soru")
-kullanici_adi = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):", key="kullanici")
-
-if soru.strip().lower() == ADMIN_KODU.lower():
-    with st.expander("🔐 Yetkili girişi yapılıyor..."):
-        st.text_input("👤 Kullanıcı Adı", key="admin_user")
-        st.text_input("🔑 Şifre", type="password", key="sifre")
-        if st.session_state.get("admin_user") == ADMIN_KULLANICI and st.session_state.get("sifre") == ADMIN_SIFRE:
-            st.success("✅ Giriş başarılı.")
-
-            # Butonlarla işlem seçme
-            secim = st.radio("🔧 Admin İşlemleri Seçin", ["Logları Gör", "Yeni Senaryo", "Senaryo Düzenle", "Sık Sorular"])
-
-            if secim == "Logları Gör":
-                logs = loglari_yukle()
-                st.subheader("📊 Soru Logları")
-                st.dataframe(logs, use_container_width=True)
-                buffer = io.BytesIO()
-                logs.to_excel(buffer, index=False, engine='openpyxl')
-                buffer.seek(0)
-                st.download_button("📥 Excel olarak indir", data=buffer, file_name="soru_loglari.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                if st.button("🗑️ Logları sıfırla"):
-                    os.remove(EXCEL_LOG) if os.path.exists(EXCEL_LOG) else None
-                    st.rerun()
-
-            elif secim == "Yeni Senaryo":
-                senaryo_ekle_formu()
-
-            elif secim == "Senaryo Düzenle":
-                senaryo_duzenle_paneli()
-
-            elif secim == "Sık Sorular":
-                sik_sorulan_kontrolu()
-
-            if st.button("🚪 Oturumu Kapat"):
-                oturumu_kapat()
-
-        elif st.session_state.get("admin_user") and st.session_state.get("sifre"):
-            st.error("❌ Hatalı kullanıcı adı veya şifre")
-
-else:
-    if soru:
-        eslesen_kelime = anahtar_bul(soru, df["Anahtar Kelime"].unique())
-        if eslesen_kelime:
-            senaryolar = df[df["Anahtar Kelime"].str.lower() == eslesen_kelime.lower()]
-            if not senaryolar.empty:
-                st.info(f"🧠 Eşleşen kelime: '{eslesen_kelime}'")
-                secim = st.selectbox("Lütfen neyi kastettiğinizi seçin:", senaryolar["Senaryo"].tolist())
-                secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
-                senaryo_goster(secilen)
-                log_ekle(soru, "Eşleşme bulundu", kullanici_adi)
-                toast_bildirim("✅ Sorunuz başarıyla kaydedildi", "success")
+        ekle = st.form_submit_button("✅ Ekle")
+        if ekle and anahtar and senaryo:
+            dosya = "veri.xlsx"
+            if os.path.exists(dosya):
+                df = pd.read_excel(dosya)
             else:
-                st.warning("⚠️ Eşleşen anahtar kelime bulundu ama senaryo bilgisi eksik.")
-                log_ekle(soru, "Anahtar eşleşti ama senaryo yok", kullanici_adi)
-                toast_bildirim("⚠️ Senaryo bulunamadı", "warning")
-        else:
-            st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
-            log_ekle(soru, "Eşleşme bulunamadı", kullanici_adi)
-            toast_bildirim("⚠️ Eşleşme bulunamadı", "error")
+                df = pd.DataFrame(columns=["Anahtar Kelime", "Senaryo", "Açıklama", "Çözüm", "Sorumlu", "Görsel"])
+
+            yeni = pd.DataFrame([{
+                "Anahtar Kelime": anahtar,
+                "Senaryo": senaryo,
+                "Açıklama": aciklama,
+                "Çözüm": cozum,
+                "Sorumlu": sorumlu,
+                "Görsel": gorsel
+            }])
+            df = pd.concat([df, yeni], ignore_index=True)
+            df.to_excel(dosya, index=False)
+            st.success("✅ Yeni senaryo başarıyla eklendi.")
+            st.experimental_rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim.
+
+# Mevcut senaryoyu düzenleme paneli
+def senaryo_duzenle_paneli():
+    st.markdown("### ✏️ Mevcut Senaryoları Düzenle")
+    dosya = "veri.xlsx"
+    if not os.path.exists(dosya):
+        st.warning("⚠️ veri.xlsx bulunamadı.")
+        return
+    df = pd.read_excel(dosya)
+    if df.empty:
+        st.info("Veri dosyası boş.")
+        return
+    secim = st.selectbox("Düzenlenecek Senaryo", df["Senaryo"].tolist())
+    secilen = df[df["Senaryo"] == secim].iloc[0]
+
+    yeni_aciklama = st.text_area("📖 Açıklama", value=secilen["Açıklama"])
+    yeni_cozum = st.text_area("🛠️ Çözüm", value=secilen["Çözüm"])
+    yeni_sorumlu = st.text_input("👤 Sorumlu", value=secilen["Sorumlu"])
+    yeni_gorsel = st.text_input("🖼️ Görsel", value=secilen["Görsel"])
+
+    if st.button("💾 Güncelle"):
+        df.loc[df["Senaryo"] == secim, ["Açıklama", "Çözüm", "Sorumlu", "Görsel"]] = \
+            [yeni_aciklama, yeni_cozum, yeni_sorumlu, yeni_gorsel]
+        df.to_excel(dosya, index=False)
+        st.success("✅ Güncelleme tamamlandı.")
+
+# Sık gelen sorular listesi (öğrenen yapı)
+def sik_sorulan_kontrolu():
+    st.markdown("### 🔁 Sık Sorulan Sorular")
+    log_path = "soru_loglari.xlsx"
+    if not os.path.exists(log_path):
+        st.info("Soru logu bulunamadı.")
+        return
+    df = pd.read_excel(log_path)
+    populer = df["Soru"].value_counts().head(5)
+    for soru, adet in populer.items():
+        st.markdown(f"- **{soru}** → {adet} kez")
