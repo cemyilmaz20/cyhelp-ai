@@ -2,6 +2,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 import os
+import io
 
 st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
 st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
@@ -72,10 +73,15 @@ if soru.strip().lower() == ADMIN_KODU.lower():
             st.subheader("📊 Soru Logları")
             st.dataframe(logs, use_container_width=True)
 
+            buffer = io.BytesIO()
+            logs.to_excel(buffer, index=False, engine='openpyxl')
+            buffer.seek(0)
+
             st.download_button(
-                "📥 Excel olarak indir",
-                data=logs.to_csv(index=False).encode("utf-8"),
-                file_name="soru_loglari.csv"
+            "📥 Excel olarak indir",
+            data=buffer,
+            file_name="soru_loglari.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
             if st.button("🗑️ Logları sıfırla"):
