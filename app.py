@@ -8,7 +8,7 @@ from cyhelp_ekstra_moduller import *  # 👈 bu satırı ekliyorsun
 st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
 st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
 
-mobil_uyumlu_tema()
+
 
 EXCEL_LOG = "soru_loglari.xlsx"
 EXCEL_DATA = "veri.xlsx"
