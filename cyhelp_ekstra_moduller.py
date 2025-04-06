@@ -32,11 +32,13 @@ def senaryo_ekle_formu():
         ekle = st.form_submit_button("✅ Ekle")
         if ekle and anahtar and senaryo:
             dosya = "veri.xlsx"
+            # Eğer dosya var ise oku, yoksa yeni oluştur
             if os.path.exists(dosya):
                 df = pd.read_excel(dosya)
             else:
                 df = pd.DataFrame(columns=["Anahtar Kelime", "Senaryo", "Açıklama", "Çözüm", "Sorumlu", "Görsel"])
 
+            # Yeni senaryoyu ekle
             yeni = pd.DataFrame([{
                 "Anahtar Kelime": anahtar,
                 "Senaryo": senaryo,
@@ -45,8 +47,9 @@ def senaryo_ekle_formu():
                 "Sorumlu": sorumlu,
                 "Görsel": gorsel
             }])
-            df = pd.concat([df, yeni], ignore_index=True)
-            df.to_excel(dosya, index=False)
+            df = pd.concat([df, yeni], ignore_index=True)  # Yeni senaryoyu ekle
+            df.to_excel(dosya, index=False)  # Veriyi kaydet
+
             st.success("✅ Yeni senaryo başarıyla eklendi.")
             st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim.
 
