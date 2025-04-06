@@ -1,68 +1,36 @@
 import streamlit as st
 import pandas as pd
+import datetime
 import os
-import re
-from datetime import datetime, timedelta
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+# Ayarlar
 st.set_page_config(page_title="CYHELP", page_icon="🧠")
-st.title("🔧 CYHELP | Yapay Zeka Destekli VAVA İş Akış Asistanı")
+st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
 
+# Excel dosyalarını yükle
 df = pd.read_excel("veri.xlsx")
-stop_words = ["ben", "bir", "bu", "şu", "ve", "ile", "de", "da", "ama", "çok", "neden", "nasıl", "şey", "gibi", "ki"]
+log_file_path = "soru_loglari.xlsx"
 
-es_anlamli = {
-    "dondu": ["kitlendi", "takıldı", "çöktü", "donuyor", "kasma"],
-    "giriş": ["login", "şifre", "oturum", "giremiyorum"],
-    "ruhsat": ["belge", "noter evrağı", "vesika"],
-    "çalışmıyor": ["açılmıyor", "başlamıyor", "görünmüyor"]
-}
+# Google Sheet Ayarı
+sheet_id = "1xkLogLi6AD5Z2TILjGhnNIVecKT608LbQpaZrORV6yI"
+sheet_name = "Sayfa1"
 
-def google_log_yaz(log):
-    try:
-        scope = ["https://spreadsheets.google.com/feeds",
-                 "https://www.googleapis.com/auth/spreadsheets",
-                 "https://www.googleapis.com/auth/drive.file",
-                 "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name("client_secret.json", scope)
-        client = gspread.authorize(creds)
-        sheet = client.open_by_key("1xkLogLi6AD5Z2TILjGhnNIVecKT608LbQpaZrORV6yI").sheet1
-        sheet.append_row([log["Tarih"], log["Kullanıcı"], log["Soru"], log["Durum"]])
-        return True
-    except Exception as e:
-        st.warning(f"⚠️ Google Sheet log hatası: {e}")
-        return False
+# Kullanıcı girişi ve soru
+soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...):")
+kullanici = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):")
 
-def logla(soru, kullanici, durum="Eşleşme bulunamadı"):
-    tarih = (datetime.now() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
-    yeni_log = {
-        "Tarih": tarih,
-        "Kullanıcı": kullanici if kullanici else "-",
-        "Soru": soru,
-        "Durum": durum
-    }
-    log_yolu = "soru_loglari.xlsx"
-    try:
-        mevcut = pd.read_excel(log_yolu)
-        log_df = pd.concat([mevcut, pd.DataFrame([yeni_log])], ignore_index=True)
-    except:
-        log_df = pd.DataFrame([yeni_log])
-    log_df.to_excel(log_yolu, index=False)
-    google_log_yaz(yeni_log)
-
-def anahtar_kelime_bul(soru):
-    kelimeler = re.findall(r'\b\w+\b', soru.lower())
-    anlamli = [k for k in kelimeler if k not in stop_words]
-    for k in anlamli:
-        for ak in df["Anahtar Kelime"].unique():
-            if k in ak.lower() or ak.lower() in k:
-                return ak
-    for ak, esler in es_anlamli.items():
-        for es in esler:
-            if es in anlamli:
-                return ak
+# Anahtar kelime eşleştirme
+def yakala(cumle):
+    cumle = cumle.lower()
+    for kelime in df["Anahtar Kelime"].dropna().unique():
+        if kelime.lower() in cumle:
+            return kelime
     return None
+
+def senaryo_bul(kelime):
+    return df[df["Anahtar Kelime"].str.lower() == kelime.lower()]
 
 def senaryo_goster(row):
     st.subheader(f"📌 {row['Senaryo']}")
@@ -70,67 +38,74 @@ def senaryo_goster(row):
     st.markdown(f"**🛠️ Çözüm:** {row['Çözüm']}")
     st.markdown(f"**👤 Sorumlu:** {row['Sorumlu']}")
     if pd.notna(row["Görsel"]) and row["Görsel"] != "":
-        dosya_yolu = os.path.join("images", row["Görsel"])
-        if os.path.exists(dosya_yolu):
-            st.image(dosya_yolu, caption=row["Senaryo"], use_column_width=True)
+        image_path = os.path.join("images", row["Görsel"])
+        if os.path.exists(image_path):
+            st.image(image_path, caption=row["Senaryo"], use_column_width=True)
         else:
             st.warning(f"⚠️ Hata ile ilgili görsel bulunamadı")
 
-# Admin erişimi
-admin_giris = False
-soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...)")
-
-if soru.lower() == "cyadminacil":
-    st.warning("🛡️ Yöneticiler için giriş ekranı")
-    username = st.text_input("👤 Kullanıcı adı")
-    password = st.text_input("🔑 Şifre", type="password")
-    if username == "cmyvava" and password == "12345":
-        admin_giris = True
+# Logları yaz
+def log_yaz(soru, durum, kullanici):
+    zaman = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    yeni = pd.DataFrame([{
+        "Tarih": zaman,
+        "Soru": soru,
+        "Durum": durum,
+        "Kullanıcı": kullanici if kullanici else "-"
+    }])
+    # Yerel log
+    if os.path.exists(log_file_path):
+        mevcut = pd.read_excel(log_file_path)
+        log_df = pd.concat([mevcut, yeni], ignore_index=True)
     else:
-        st.stop()
+        log_df = yeni
+    log_df.to_excel(log_file_path, index=False)
 
-# 👑 Admin panel
-if admin_giris:
-    st.success("✅ Giriş başarılı. Loglar aşağıda:")
+    # Google Sheet log
     try:
-        log_df = pd.read_excel("soru_loglari.xlsx")
-        st.dataframe(log_df, use_container_width=True)
-        st.download_button("📥 Excel olarak indir", data=log_df.to_excel(index=False),
-                           file_name="soru_loglari.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    except:
-        st.info("📁 Log dosyası henüz oluşmadı.")
-    
-    if st.button("🗑️ Logları Sıfırla"):
-        if os.path.exists("soru_loglari.xlsx"):
-            os.remove("soru_loglari.xlsx")
-            st.success("✅ Log dosyası sıfırlandı.")
-        else:
-            st.warning("Zaten log dosyası yoktu.")
-        st.stop()
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_name("client_secret.json", scope)
+        client = gspread.authorize(creds)
+        sheet = client.open_by_key(sheet_id).worksheet(sheet_name)
+        sheet.append_row([zaman, soru, durum, kullanici if kullanici else "-"])
+    except Exception as e:
+        st.warning(f"⚠️ Google Sheet log hatası: {e}")
 
-    # Test tuşu
-    if st.button("🔁 Google Sheet Test"):
-        logla("test mesajı", "admin_test", "Admin test logu")
-        st.success("Google Sheet'e test logu gönderildi.")
+# Admin panel girişi
+if soru == "cyadminacil":
+    user = st.text_input("👤 Kullanıcı Adı:")
+    password = st.text_input("🔐 Şifre:", type="password")
+    if user == "cmyvava" and password == "12345":
+        st.success("✅ Giriş başarılı. Loglar aşağıda:")
+
+        if os.path.exists(log_file_path):
+            logs = pd.read_excel(log_file_path)
+            st.dataframe(logs)
+            st.download_button("📥 Excel olarak indir", data=logs.to_excel(index=False), file_name="soru_loglari.xlsx")
+
+            if st.button("🧹 Logları Sıfırla"):
+                os.remove(log_file_path)
+                st.warning("📁 Log dosyası sıfırlandı.")
+        else:
+            st.info("📂 Log dosyası henüz oluşmadı.")
+    else:
+        st.warning("🔒 Giriş başarısız")
     st.stop()
 
-# Kullanıcı adı (isteğe bağlı)
-kullanici = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):")
-
-if soru and soru.lower() != "cyadminacil":
-    anahtar = anahtar_kelime_bul(soru)
-    if anahtar:
-        senaryolar = df[df["Anahtar Kelime"].str.lower() == anahtar.lower()]
-        if len(senaryolar) > 1:
-            st.info(f"🧠 '{anahtar}' için {len(senaryolar)} senaryo bulundu:")
-            secim = st.selectbox("Lütfen durumu seçin:", senaryolar["Senaryo"].tolist())
-            secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
-            senaryo_goster(secilen)
-        elif len(senaryolar) == 1:
-            senaryo_goster(senaryolar.iloc[0])
+# Soru varsa işle
+if soru:
+    bulunan = yakala(soru)
+    if bulunan:
+        senaryolar = senaryo_bul(bulunan)
+        if not senaryolar.empty:
+            st.info(f"🧠 '{bulunan}' ile ilgili {len(senaryolar)} çözüm bulundu:")
+            secim = st.selectbox("Lütfen neyi kastettiğinizi seçin:", senaryolar["Senaryo"].tolist())
+            secilen = senaryolar[senaryolar["Senaryo"] == secim]
+            senaryo_goster(secilen.iloc[0])
+            log_yaz(soru, "Eşleşme bulundu", kullanici)
         else:
             st.warning("⚠️ Eşleşen anahtar kelime bulundu ama senaryo bilgisi eksik.")
-            logla(soru, kullanici, durum="Anahtar eşleşti ama senaryo yok")
+            log_yaz(soru, "Anahtar eşleşti ama senaryo yok", kullanici)
     else:
         st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
-        logla(soru, kullanici)
+        log_yaz(soru, "Eşleşme bulunamadı", kullanici)
