@@ -7,13 +7,21 @@ import os
 def turkiye_saati():
     return (datetime.utcnow() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
 
-# Başarı mesajının kaybolmaması için
-def success_message_display():
-    if "success_message" in st.session_state:
-        st.success(st.session_state["success_message"])
-        del st.session_state["success_message"]  # Mesaj bir kez gösterildikten sonra sil
+# Page configuration should be the first command
+st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
 
-# Yeni senaryo ekleme formu
+# Bildirim (toast gibi)
+def toast_bildirim(mesaj, tipi="info"):
+    if tipi == "success":
+        st.success(mesaj)
+    elif tipi == "warning":
+        st.warning(mesaj)
+    elif tipi == "error":
+        st.error(mesaj)
+    else:
+        st.info(mesaj)
+
+# Senaryo ekleme formu
 def senaryo_ekle_formu():
     st.markdown("### ➕ Yeni Senaryo Ekle")
     with st.form("senaryo_ekle_form", clear_on_submit=True):
@@ -42,18 +50,11 @@ def senaryo_ekle_formu():
                 "Görsel": gorsel
             }])
 
-            # Yeni veriyi mevcut veriye ekle
-            df = pd.concat([df, yeni], ignore_index=True)
+            df = pd.concat([df, yeni], ignore_index=True)  # Yeni senaryoyu ekle
+            df.to_excel(dosya, index=False)  # Veriyi kaydet
 
-            # Dosyayı kaydet
-            try:
-                df.to_excel(dosya, index=False)
-                print("Veri başarıyla kaydedildi.")
-                st.session_state["success_message"] = "✅ Yeni senaryo başarıyla eklendi."  # Mesajı sakla
-                st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim
-            except Exception as e:
-                print(f"Error while saving to Excel: {str(e)}")
-                st.error(f"❌ Senaryo eklenirken hata oluştu: {str(e)}")
+            st.success("✅ Yeni senaryo başarıyla eklendi.")
+            st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim.
 
 # Mevcut senaryoyu düzenleme paneli
 def senaryo_duzenle_paneli():
@@ -69,25 +70,16 @@ def senaryo_duzenle_paneli():
     secim = st.selectbox("Düzenlenecek Senaryo", df["Senaryo"].tolist())
     secilen = df[df["Senaryo"] == secim].iloc[0]
 
-    yeni_anahtar = st.text_input("🔑 Anahtar Kelime", value=secilen["Anahtar Kelime"])
     yeni_aciklama = st.text_area("📖 Açıklama", value=secilen["Açıklama"])
     yeni_cozum = st.text_area("🛠️ Çözüm", value=secilen["Çözüm"])
     yeni_sorumlu = st.text_input("👤 Sorumlu", value=secilen["Sorumlu"])
     yeni_gorsel = st.text_input("🖼️ Görsel", value=secilen["Görsel"])
 
     if st.button("💾 Güncelle"):
-        print(f"Updating scenario: {secilen['Senaryo']} with new values.")  # Debugging
-        print(f"New Key: {yeni_anahtar}, New Description: {yeni_aciklama}")
-
-        try:
-            df.loc[df["Senaryo"] == secim, ["Anahtar Kelime", "Açıklama", "Çözüm", "Sorumlu", "Görsel"]] = \
-                [yeni_anahtar, yeni_aciklama, yeni_cozum, yeni_sorumlu, yeni_gorsel]
-            df.to_excel(dosya, index=False)
-            st.session_state["success_message"] = "✅ Güncelleme tamamlandı."  # Mesajı sakla
-            st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim
-        except Exception as e:
-            print(f"Error while updating Excel: {str(e)}")  # Debugging
-            st.error(f"❌ Güncelleme sırasında hata oluştu: {str(e)}")
+        df.loc[df["Senaryo"] == secim, ["Anahtar Kelime", "Açıklama", "Çözüm", "Sorumlu", "Görsel"]] = \
+            [yeni_aciklama, yeni_cozum, yeni_sorumlu, yeni_gorsel]
+        df.to_excel(dosya, index=False)
+        st.success("✅ Güncelleme tamamlandı.")
 
 # Sık gelen sorular listesi (öğrenen yapı)
 def sik_sorulan_kontrolu():
@@ -100,7 +92,3 @@ def sik_sorulan_kontrolu():
     populer = df["Soru"].value_counts().head(5)
     for soru, adet in populer.items():
         st.markdown(f"- **{soru}** → {adet} kez")
-
-# Başarı mesajını ekranda tutma
-success_message_display()
-
