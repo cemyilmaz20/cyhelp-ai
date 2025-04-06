@@ -37,7 +37,7 @@ def senaryo_ekle_formu():
             else:
                 df = pd.DataFrame(columns=["Anahtar Kelime", "Senaryo", "Açıklama", "Çözüm", "Sorumlu", "Görsel"])
 
-            # Yeni senaryo verisini ekle
+            # Yeni senaryoyu ekle
             yeni = pd.DataFrame([{
                 "Anahtar Kelime": anahtar,
                 "Senaryo": senaryo,
@@ -49,11 +49,12 @@ def senaryo_ekle_formu():
 
             # Yeni veriyi mevcut veriye ekle
             df = pd.concat([df, yeni], ignore_index=True)
-            
+
             # Dosyayı kaydet
             try:
                 df.to_excel(dosya, index=False)
                 st.success("✅ Yeni senaryo başarıyla eklendi.")
+                st.write(f"**Veri Kaydedildi:** {df.tail(1)}")  # Debug: Kaydedilen yeni veriyi konsola yazdır
                 st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim
             except Exception as e:
                 st.error(f"❌ Senaryo eklenirken hata oluştu: {str(e)}")
@@ -90,6 +91,7 @@ def senaryo_duzenle_paneli():
                 [yeni_anahtar, yeni_aciklama, yeni_cozum, yeni_sorumlu, yeni_gorsel]
             df.to_excel(dosya, index=False)
             st.success("✅ Güncelleme tamamlandı.")
+            st.write(f"**Veri Güncellendi:** {df[df['Senaryo'] == secim]}")  # Debug: Güncellenen veriyi konsola yazdır
             st.rerun()  # Sayfayı yenileyerek yeni veriyi doğru şekilde yükleyelim
         except Exception as e:
             st.error(f"❌ Güncelleme sırasında hata oluştu: {str(e)}")
