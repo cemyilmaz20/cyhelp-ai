@@ -1,130 +1,95 @@
+
 import streamlit as st
 import pandas as pd
-import datetime
-import os
-from io import BytesIO
+from datetime import datetime
+import io
 
-# Sayfa başlığı ve ayarları
-st.set_page_config(page_title="CYHELP | VAVA İş Akış Asistanı", page_icon="🧠")
+st.set_page_config(page_title="CYHELP | Yapay Zeka Destekli VAVA İş Akış Asistanı", page_icon="🧠")
 
-st.markdown("""
-<h1 style='display: flex; align-items: center; gap: 10px;'>
-  🧠 CYHELP | Yapay Zeka Destekli <br> VAVA İş Akış Asistanı
-</h1>
-""", unsafe_allow_html=True)
+# Başlık
+st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
 
-# Gerekli dosyalar
-df = pd.read_excel("veri.xlsx")
-LOG_FILE = "soru_loglari.xlsx"
+# Gizli admin tetikleyici
+arama = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...)", key="arama_input")
 
-# Admin bilgiler
-GIZLI_KELIME = "cyadminacil"
-ADMIN_KULLANICI = "cmyvava"
-ADMIN_SIFRE = "12345"
+# Admin ekranı tetiklenirse
+if arama == "cyadminacil":
+    with st.expander("🔐 Yetkili girişi yapılıyor...", expanded=True):
+        kullanici = st.text_input("👤 Kullanıcı Adı", key="admin_user")
+        sifre = st.text_input("🔑 Şifre", type="password", key="admin_pass")
+        if kullanici == "cmyvava" and sifre == "12345":
+            st.success("✅ Giriş başarılı. Loglar aşağıda:")
+            try:
+                df = pd.read_excel("soru_loglari.xlsx")
+                st.dataframe(df)
 
-# Oturum başlatma
-if "admin_mode" not in st.session_state:
-    st.session_state.admin_mode = False
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                    df.to_excel(writer, index=False)
+                st.download_button("📥 Excel olarak indir", data=buffer.getvalue(), file_name="loglar.xlsx")
 
-# Log kaydetme fonksiyonu
-def log_kaydet(soru, durum, kullanici):
-    log = {
-        "Tarih": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Soru": soru,
-        "Durum": durum,
-        "Kullanıcı": kullanici if kullanici else "-"
-    }
-    try:
-        if os.path.exists(LOG_FILE):
-            df_log = pd.read_excel(LOG_FILE)
-            df_log = pd.concat([df_log, pd.DataFrame([log])], ignore_index=True)
+                if st.button("🗑️ Logları sıfırla"):
+                    df = pd.DataFrame(columns=["Tarih", "Soru", "Durum", "Kullanıcı"])
+                    df.to_excel("soru_loglari.xlsx", index=False)
+                    st.success("🧹 Log dosyası sıfırlandı. Sayfayı yenileyin.")
+
+                if st.button("🚪 Oturumu Kapat"):
+                    st.session_state.clear()
+                    st.experimental_rerun()
+
+            except FileNotFoundError:
+                st.info("📁 Log dosyası henüz oluşmadı.")
+        elif kullanici or sifre:
+            st.error("❌ Hatalı kullanıcı adı veya şifre")
+
+else:
+    # Kullanıcı arayüzü
+    kullanici_adi = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):", key="normal_user")
+    df = pd.read_excel("veri.xlsx")
+
+    def yakala(cumle):
+        cumle = cumle.lower()
+        for kelime in df["Anahtar Kelime"].unique():
+            if kelime.lower() in cumle:
+                return kelime
+        return None
+
+    def senaryo_goster(row):
+        st.subheader(f"📌 {row['Senaryo']}")
+        st.markdown(f"**🔎 Açıklama:** {row['Açıklama']}")
+        st.markdown(f"**🛠️ Çözüm:** {row['Çözüm']}")
+        st.markdown(f"**👤 Sorumlu:** {row['Sorumlu']}")
+        if pd.notna(row["Görsel"]) and row["Görsel"] != "":
+            st.image(f"images/{row['Görsel']}", caption=row["Senaryo"], use_column_width=True)
         else:
-            df_log = pd.DataFrame([log])
-        df_log.to_excel(LOG_FILE, index=False)
-    except Exception as e:
-        st.warning(f"⚠️ Log kaydedilemedi: {e}")
-# Senaryo gösterimi
-def senaryo_goster(row):
-    st.subheader(f"📌 {row['Senaryo']}")
-    st.markdown(f"**🔎 Açıklama:** {row['Açıklama']}")
-    st.markdown(f"**🛠️ Çözüm:** {row['Çözüm']}")
-    st.markdown(f"**👤 Sorumlu:** {row['Sorumlu']}")
-    if pd.notna(row["Görsel"]) and row["Görsel"] != "":
-        st.image(f"images/{row['Görsel']}", caption=row["Senaryo"], use_column_width=True)
-    else:
-        st.warning("⚠️ Hata ile ilgili görsel bulunamadı")
+            st.warning(f"⚠️ Hata ile ilgili görsel bulunamadı")
 
-# Anahtar kelime yakalama
-def yakala(cumle):
-    cumle = cumle.lower()
-    for kelime in df["Anahtar Kelime"].dropna().unique():
-        if str(kelime).lower() in cumle:
-            return kelime
-    return None
-
-# Admin paneli
-def admin_paneli():
-    st.success("✅ Giriş başarılı. Loglar aşağıda:")
-
-    if os.path.exists(LOG_FILE):
-        logs = pd.read_excel(LOG_FILE)
-        st.dataframe(logs, use_container_width=True)
-
-        excel_buffer = BytesIO()
-        logs.to_excel(excel_buffer, index=False)
-        excel_buffer.seek(0)
-
-        st.download_button("📥 Excel olarak indir", data=excel_buffer, file_name="loglar.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-        if st.button("🗑️ Logları sıfırla"):
-            os.remove(LOG_FILE)
-            st.warning("🧹 Log dosyası silindi.")
-    else:
-        st.info("📂 Log dosyası henüz oluşmadı.")
-
-    if st.button("🚪 Oturumu Kapat"):
-        st.session_state.admin_mode = False
-        st.rerun()
-
-# Giriş alanları
-soru = st.text_input("📝 Sorunuzu yazın (örnek: sistem dondu, giriş yapamıyorum...)")
-kullanici = st.text_input("👤 Kullanıcı adınız (isteğe bağlı):")
-
-# Admin girişi
-if st.session_state.admin_mode:
-    admin_paneli()
-    st.stop()
-
-if soru.strip().lower() == GIZLI_KELIME:
-    st.warning("🔒 Yetkili girişi yapılıyor...")
-    user = st.text_input("👤 Kullanıcı Adı")
-    pw = st.text_input("🔑 Şifre", type="password")
-    if user == ADMIN_KULLANICI and pw == ADMIN_SIFRE:
-        st.session_state.admin_mode = True
-        st.rerun()
-    else:
-        st.warning("❌ Hatalı kullanıcı adı veya şifre")
-    st.stop()
-
-# Normal kullanıcı işlemleri
-elif soru:
-    bulunan = yakala(soru)
-    if bulunan:
-        senaryolar = df[df["Anahtar Kelime"].str.lower() == bulunan.lower()]
-        if senaryolar.empty:
-            st.warning("⚠️ Eşleşen anahtar kelime bulundu ama senaryo bilgisi eksik.")
-            log_kaydet(soru, "Anahtar eşleşti ama senaryo yok", kullanici)
-        elif len(senaryolar) == 1:
-            secilen = senaryolar.iloc[0]
-            senaryo_goster(secilen)
-            log_kaydet(soru, "Senaryo gösterildi", kullanici)
+    if arama:
+        bulunan = yakala(arama)
+        if bulunan:
+            senaryolar = df[df["Anahtar Kelime"].str.lower() == bulunan.lower()]
+            if not senaryolar.empty:
+                secim = st.selectbox("Lütfen neyi kastettiğinizi seçin:", senaryolar["Senaryo"].tolist())
+                secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
+                senaryo_goster(secilen)
+                durum = "Eşleşme bulundu"
+            else:
+                st.warning("⚠️ Eşleşen anahtar kelime bulundu ama senaryo bilgisi eksik.")
+                durum = "Anahtar eşleşti ama senaryo yok"
         else:
-            st.info(f"🧠 '{bulunan}' ile ilgili birden fazla senaryo bulundu:")
-            secim = st.selectbox("Lütfen neyi kastettiğinizi seçin:", senaryolar["Senaryo"].tolist())
-            secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
-            senaryo_goster(secilen)
-            log_kaydet(soru, "Senaryo seçildi", kullanici)
-    else:
-        st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
-        log_kaydet(soru, "Eşleşme bulunamadı", kullanici)
+            st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
+            durum = "Eşleşme bulunamadı"
+
+        # Log yaz
+        yeni_kayit = pd.DataFrame([{
+            "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Soru": arama,
+            "Durum": durum,
+            "Kullanıcı": kullanici_adi if kullanici_adi else "-"
+        }])
+        try:
+            eski_log = pd.read_excel("soru_loglari.xlsx")
+            log_df = pd.concat([eski_log, yeni_kayit], ignore_index=True)
+        except:
+            log_df = yeni_kayit
+        log_df.to_excel("soru_loglari.xlsx", index=False)
