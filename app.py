@@ -1,3 +1,4 @@
+
 from datetime import datetime
 import pandas as pd
 import streamlit as st
@@ -6,6 +7,8 @@ import io
 from cyhelp_ekstra_moduller import *  # 👈 bu satırı ekliyorsun
 st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
 st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
+
+mobil_uyumlu_tema()
 
 EXCEL_LOG = "soru_loglari.xlsx"
 EXCEL_DATA = "veri.xlsx"
@@ -26,7 +29,7 @@ def loglari_yukle():
 def log_ekle(soru, durum, kullanici):
     logs = loglari_yukle()
     yeni_kayit = {
-        "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Tarih": turkiye_saati(),  # Saat düzeltildi
         "Soru": soru,
         "Durum": durum,
         "Kullanıcı": kullanici if kullanici else "-"
@@ -88,6 +91,10 @@ if soru.strip().lower() == ADMIN_KODU.lower():
                 os.remove(EXCEL_LOG) if os.path.exists(EXCEL_LOG) else None
                 st.rerun()
 
+            senaryo_ekle_formu()
+            senaryo_duzenle_paneli()
+            sik_sorulan_kontrolu()
+
             if st.button("🚪 Oturumu Kapat"):
                 oturumu_kapat()
         elif st.session_state.get("admin_user") and st.session_state.get("sifre"):
@@ -104,9 +111,13 @@ else:
                 secilen = senaryolar[senaryolar["Senaryo"] == secim].iloc[0]
                 senaryo_goster(secilen)
                 log_ekle(soru, "Eşleşme bulundu", kullanici_adi)
+                toast_bildirim("✅ Sorunuz başarıyla kaydedildi", "success")
             else:
                 st.warning("⚠️ Eşleşen anahtar kelime bulundu ama senaryo bilgisi eksik.")
                 log_ekle(soru, "Anahtar eşleşti ama senaryo yok", kullanici_adi)
+                toast_bildirim("⚠️ Senaryo bulunamadı", "warning")
         else:
             st.warning("🤖 Bu soruya dair kayıtlı bir bilgi bulunamadı.")
             log_ekle(soru, "Eşleşme bulunamadı", kullanici_adi)
+            toast_bildirim("⚠️ Eşleşme bulunamadı", "error")
+
