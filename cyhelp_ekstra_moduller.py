@@ -11,16 +11,12 @@ def turkiye_saati():
 def toast_bildirim(mesaj, tipi="info"):
     if tipi == "success":
         st.success(mesaj)
-        time.sleep(3)  # Mesajı 3 saniye göster
     elif tipi == "warning":
         st.warning(mesaj)
-        time.sleep(3)
     elif tipi == "error":
         st.error(mesaj)
-        time.sleep(3)
     else:
         st.info(mesaj)
-        time.sleep(3)
 
 # Yeni senaryo ekleme formu (expander KALDIRILDI!)
 def senaryo_ekle_formu():
