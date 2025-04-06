@@ -3,7 +3,8 @@ import pandas as pd
 import streamlit as st
 import os
 import io
-from cyhelp_ekstra_moduller import *  # 👈 bu satırı ekliyorsun
+from cyhelp_ekstra_moduller import *  # 👈 Bu satır kaldı
+
 st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
 st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
 
@@ -71,7 +72,7 @@ if soru.strip().lower() == ADMIN_KODU.lower():
             st.success("✅ Giriş başarılı.")
 
             # Butonlarla işlem seçme
-            secim = st.radio("🔧 Admin İşlemleri Seçin", ["Logları Gör", "Yeni Senaryo", "Senaryo Düzenle", "Sık Sorular"])
+            secim = st.radio("🔧 Admin İşlemleri Seçin", ["Logları Gör", "Sık Sorular"])
 
             if secim == "Logları Gör":
                 logs = loglari_yukle()
@@ -84,12 +85,6 @@ if soru.strip().lower() == ADMIN_KODU.lower():
                 if st.button("🗑️ Logları sıfırla"):
                     os.remove(EXCEL_LOG) if os.path.exists(EXCEL_LOG) else None
                     st.rerun()
-
-            elif secim == "Yeni Senaryo":
-                senaryo_ekle_formu()
-
-            elif secim == "Senaryo Düzenle":
-                senaryo_duzenle_paneli()
 
             elif secim == "Sık Sorular":
                 sik_sorulan_kontrolu()
