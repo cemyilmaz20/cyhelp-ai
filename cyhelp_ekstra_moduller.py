@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
@@ -7,21 +8,22 @@ import os
 def turkiye_saati():
     return (datetime.utcnow() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
 
-# Page configuration should be the first command
-st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
-
 # Bildirim (toast gibi)
 def toast_bildirim(mesaj, tipi="info"):
     if tipi == "success":
         st.success(mesaj)
+        time.sleep(3)  # Mesajı 3 saniye göster
     elif tipi == "warning":
         st.warning(mesaj)
+        time.sleep(3)
     elif tipi == "error":
         st.error(mesaj)
+        time.sleep(3)
     else:
         st.info(mesaj)
+        time.sleep(3)
 
-# Senaryo ekleme formu
+# Yeni senaryo ekleme formu (expander KALDIRILDI!)
 def senaryo_ekle_formu():
     st.markdown("### ➕ Yeni Senaryo Ekle")
     with st.form("senaryo_ekle_form", clear_on_submit=True):
@@ -35,6 +37,7 @@ def senaryo_ekle_formu():
         ekle = st.form_submit_button("✅ Ekle")
         if ekle and anahtar and senaryo:
             dosya = "veri.xlsx"
+            # Eğer dosya var ise oku, yoksa yeni oluştur
             if os.path.exists(dosya):
                 df = pd.read_excel(dosya)
             else:
@@ -49,7 +52,6 @@ def senaryo_ekle_formu():
                 "Sorumlu": sorumlu,
                 "Görsel": gorsel
             }])
-
             df = pd.concat([df, yeni], ignore_index=True)  # Yeni senaryoyu ekle
             df.to_excel(dosya, index=False)  # Veriyi kaydet
 
