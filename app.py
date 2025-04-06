@@ -36,9 +36,11 @@ if soru_input.strip().lower() == "cyadminacil":
                     st.rerun()
 
             if st.button("🚪 Oturumu Kapat"):
-                st.session_state.pop("admin_user", None)
-                st.session_state.pop("admin_pass", None)
-                st.rerun()
+    st.session_state.pop("admin_user", None)
+    st.session_state.pop("admin_pass", None)
+    st.session_state["soru"] = ""  # ← cyadminacil ifadesini temizle
+    st.rerun()
+
         elif username or password:
             st.error("❌ Hatalı kullanıcı adı veya şifre")
 
