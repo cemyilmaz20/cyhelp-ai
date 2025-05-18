@@ -4,14 +4,17 @@ import pandas as pd
 import os
 import io
 from cyhelp_ekstra_moduller import *  # 👈 Bu satır kaldı
-if st.button("🔁 Veriyi Güncelle (Cache Temizle)"):
-    st.cache_data.clear()
-    st.rerun()
+
 
 # **Bu satırı ilk sıraya yerleştirin**
 st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
 
 st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
+
+if st.button("🔁 Veriyi Güncelle (Cache Temizle)"):
+    st.cache_data.clear()
+    st.rerun()
+
 
 EXCEL_LOG = "soru_loglari.xlsx"
 EXCEL_DATA = "veri.xlsx"
