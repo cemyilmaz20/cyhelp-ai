@@ -76,10 +76,10 @@ if soru.strip().lower() == ADMIN_KODU.lower():
         st.text_input("🔑 Şifre", type="password", key="sifre")
         if st.session_state.get("admin_user") == ADMIN_KULLANICI and st.session_state.get("sifre") == ADMIN_SIFRE:
             st.success("✅ Giriş başarılı.")
-                if st.button("🔁 Cache Temizle (veri.xlsx güncelle)"):
-        st.cache_data.clear()
-        st.success("Önbellek temizlendi, sayfa yeniden yükleniyor...")
-        st.rerun()
+            if st.button("🔁 Cache Temizle (veri.xlsx güncelle)"):
+               st.cache_data.clear()
+               st.success("Önbellek temizlendi, sayfa yeniden yükleniyor...")
+               st.rerun()
 
 
             # Butonlarla işlem seçme
