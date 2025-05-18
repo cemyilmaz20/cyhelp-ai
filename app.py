@@ -4,6 +4,9 @@ import pandas as pd
 import os
 import io
 from cyhelp_ekstra_moduller import *  # 👈 Bu satır kaldı
+if st.button("🔁 Veriyi Güncelle (Cache Temizle)"):
+    st.cache_data.clear()
+    st.rerun()
 
 # **Bu satırı ilk sıraya yerleştirin**
 st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_icon="🧠")
