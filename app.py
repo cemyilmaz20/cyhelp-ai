@@ -11,9 +11,7 @@ st.set_page_config(page_title="CYHELP | VAVA Yapay Zeka Destekli Asistan", page_
 
 st.markdown("<h1 style='text-align: center;'>🧠 CYHELP | Yapay Zeka Destekli<br>VAVA İş Akış Asistanı</h1>", unsafe_allow_html=True)
 
-if st.button("🔁 Veriyi Güncelle (Cache Temizle)"):
-    st.cache_data.clear()
-    st.rerun()
+
 
 
 EXCEL_LOG = "soru_loglari.xlsx"
@@ -78,6 +76,11 @@ if soru.strip().lower() == ADMIN_KODU.lower():
         st.text_input("🔑 Şifre", type="password", key="sifre")
         if st.session_state.get("admin_user") == ADMIN_KULLANICI and st.session_state.get("sifre") == ADMIN_SIFRE:
             st.success("✅ Giriş başarılı.")
+                if st.button("🔁 Cache Temizle (veri.xlsx güncelle)"):
+        st.cache_data.clear()
+        st.success("Önbellek temizlendi, sayfa yeniden yükleniyor...")
+        st.rerun()
+
 
             # Butonlarla işlem seçme
             secim = st.radio("🔧 Admin İşlemleri Seçin", ["Logları Gör", "Sık Sorular"])
